@@ -1,6 +1,7 @@
 from enum import Enum
 
 
-class MoveSide(Enum):
-    BLUE = 0
-    RED = 1
+class Side(Enum):
+    BLUE = 1
+    RED = 2
+    NEUTRAL = 0
