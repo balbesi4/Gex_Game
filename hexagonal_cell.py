@@ -1,13 +1,22 @@
+from typing import Any
 from Enums.move_side_enum import Side
+from constants import *
 
 
 class HexagonalCell:
-    def __init__(self, hexagon: list[tuple[float, float]], is_start: bool,
-                 is_final: bool, side: Side = Side.NEUTRAL) -> None:
+    def __init__(self, hexagon: list[tuple[float, float]], x: int, y: int,
+                 is_red_start: bool, is_red_final: bool,
+                 is_blue_start: bool, is_blue_final: bool,
+                 side: Side = Side.NEUTRAL) -> None:
         self.hexagon = hexagon
-        self.side = side
-        self.is_start = is_start
-        self.is_final = is_final
+        self.x: int = x
+        self.y: int = y
+        self.side: Side = side
+        self.color = GRAY
+        self._is_red_start: bool = is_red_start
+        self._is_red_final: bool = is_red_final
+        self._is_blue_start: bool = is_blue_start
+        self._is_blue_final: bool = is_blue_final
 
     def is_point_in_hexagon(self, point: tuple[float, float]) -> bool:
         x, y = point
@@ -30,3 +39,21 @@ class HexagonalCell:
             if intersect_x > x:
                 intersects += 1
         return intersects % 2 != 0
+
+    def is_final(self, move_side: Side) -> bool:
+        return (move_side == Side.RED and self._is_red_final) or \
+            (move_side == Side.BLUE and self._is_blue_final)
+
+    def is_start(self, move_side: Side) -> bool:
+        return (move_side == Side.RED and self._is_red_start) or \
+            (move_side == Side.BLUE and self._is_blue_start)
+
+    def try_change_color(self, move_side: Side) -> bool:
+        if self.color == RED or self.color == BLUE:
+            return False
+        if move_side == Side.RED:
+            self.color = RED
+        else:
+            self.color = BLUE
+        self.side = move_side
+        return True
