@@ -111,7 +111,7 @@ class Game:
         possible_neighbors_cords = [
             (cell.x - 1, cell.y - 1), (cell.x + 1, cell.y + 1),
             (cell.x - 1, cell.y + 1), (cell.x + 1, cell.y - 1),
-            (cell.x, cell.y - 2), (cell.x, cell.y - 2)
+            (cell.x, cell.y - 2), (cell.x, cell.y + 2)
         ]
         result = []
         for cord in possible_neighbors_cords:
@@ -120,16 +120,29 @@ class Game:
                 result.append(self._cells[x][y])
         return result
 
-    def __is_point_inside_field(self, x, y):
+    def __is_point_inside_field(self, x, y) -> bool:
         return 0 <= x < self.size * 2 - 1 and 0 <= y < self.size * 2 - 1
 
-    def __create_winner_window(self):
+    def __create_winner_window(self) -> None:
         window = Tk()
         window.resizable(False, False)
         window.geometry("400x200")
-        window.grab_set()
+        # window.grab_set()
         winner_label = Label(window, text=f"Победил {self._move_side.value} игрок!", font=('Roboto', 20))
         winner_label.place(x=50, y=80)
+
+    def __update_records(self):
+        with open("records.txt") as f:
+            old_records = [int(a[:-1]) for a in f.readlines()]
+            f.flush()
+        new_record_index = 0
+        if self.game_mode == GameMode.BOT:
+            new_record_index += 2
+        if self._move_side == Side.RED:
+            new_record_index += 1
+        old_records[new_record_index] += 1
+        with open("records.txt", "w") as f:
+            f.write('\n'.join([str(r) for r in old_records]) + '\n')
 
     def run(self) -> None:
         while self._running:
@@ -143,4 +156,5 @@ class Game:
             pygame.display.flip()
         pygame.quit()
 
+        self.__update_records()
         self.__create_winner_window()

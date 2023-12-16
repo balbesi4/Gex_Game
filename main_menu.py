@@ -9,7 +9,7 @@ class MainMenu:
         self._window = Tk()
         self._window.resizable(False, False)
         self._window.grab_set()
-        self._window.geometry("400x200")
+        self._window.geometry("400x250")
         self.__draw_menu()
         self._window.mainloop()
 
@@ -23,11 +23,14 @@ class MainMenu:
         play_with_player_button = Button(self._window, text='Играть вдвоем', font=('Roboto', 14),
                                          width=12, height=2, command=lambda:
                                          self.__start_game(GameMode.PLAYER, size_var.get()))
+        record_table_button = Button(self._window, text='Таблица побед', font=("Roboto", 14),
+                                     command=lambda: self.__show_record_table())
 
         main_label.pack(anchor='center', pady=10)
         size_entry.pack(anchor='center', pady=5)
         play_with_bot_button.place(x=50, y=100)
         play_with_player_button.place(x=220, y=100)
+        record_table_button.pack(side=BOTTOM, pady=20)
 
     def __start_game(self, game_mode: GameMode, field_size: str) -> None:
         if not field_size.isdigit() or not 3 <= int(field_size) <= 15:
@@ -36,3 +39,40 @@ class MainMenu:
         self._window.destroy()
         game = Game(game_mode, int(field_size))
         game.run()
+        self.__init__()
+
+    def __show_record_table(self) -> None:
+        with open("records.txt") as f:
+            records = f.readlines()
+        window = Toplevel(self._window)
+        window.resizable(False, False)
+        window.grab_set()
+        window.geometry("380x210")
+
+        blue_label = Label(window, text="Синий", font=('Roboto', 16), pady=10, padx=10)
+        red_label = Label(window, text='Красный', font=('Roboto', 16), pady=10, padx=10)
+        player_label = Label(window, text="Против игрока", font=('Roboto', 16), padx=10, pady=10)
+        bot_label = Label(window, text="Против бота", font=('Roboto', 16), padx=10, pady=10)
+        reset_button = Button(window, text='Сбросить', font=("Roboto", 14), command=lambda: self.__clear_records(window))
+        blue_label.grid(row=0, column=1)
+        red_label.grid(row=0, column=2)
+        player_label.grid(row=1, column=0)
+        bot_label.grid(row=2, column=0)
+        reset_button.grid(row=3, column=2, padx=10, pady=10)
+
+        row, column = 1, 1
+        for record in records:
+            record_label = Label(window, text=record[:-1], font=('Roboto', 16))
+            record_label.grid(row=row, column=column)
+            if column == 1:
+                column += 1
+                continue
+            row += 1
+            column = 1
+
+    def __clear_records(self, window: Toplevel) -> None:
+        with open("records.txt", 'w') as f:
+            f.flush()
+            f.write('0\n' * 4)
+        window.destroy()
+        self.__show_record_table()
