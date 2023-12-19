@@ -9,7 +9,7 @@ class MainMenu:
         self._window = Tk()
         self._window.resizable(False, False)
         self._window.grab_set()
-        self._window.geometry("400x250")
+        self._window.geometry("400x280")
         self.__draw_menu()
         self._window.mainloop()
 
@@ -17,27 +17,32 @@ class MainMenu:
         main_label = Label(self._window, text="Гекс", font=('Roboto', 20, 'bold'))
         size_var = StringVar(self._window, value='Введите размер поля (от 3 до 15)')
         size_entry = Entry(self._window, textvariable=size_var, width=40)
+        timer_var = StringVar(self._window, value='Введите ограничение времени на ход (по умолчанию 15)')
+        timer_entry = Entry(self._window, textvariable=timer_var, width=40)
         play_with_bot_button = Button(self._window, text='Играть с ботом', font=('Roboto', 14),
                                       width=12, height=2, command=lambda:
-                                      self.__start_game(GameMode.EASY_BOT, size_var.get()))
+                                      self.__start_game(GameMode.EASY_BOT, size_var.get(), timer_var.get()))
         play_with_player_button = Button(self._window, text='Играть вдвоем', font=('Roboto', 14),
                                          width=12, height=2, command=lambda:
-                                         self.__start_game(GameMode.PLAYER, size_var.get()))
+                                         self.__start_game(GameMode.PLAYER, size_var.get(), timer_var.get()))
         record_table_button = Button(self._window, text='Таблица побед', font=("Roboto", 14),
                                      command=lambda: self.__show_record_table())
 
         main_label.pack(anchor='center', pady=10)
         size_entry.pack(anchor='center', pady=5)
-        play_with_bot_button.place(x=50, y=100)
-        play_with_player_button.place(x=220, y=100)
+        timer_entry.pack(anchor='center', pady=5)
+        play_with_bot_button.place(x=50, y=130)
+        play_with_player_button.place(x=220, y=130)
         record_table_button.pack(side=BOTTOM, pady=20)
 
-    def __start_game(self, game_mode: GameMode, field_size: str) -> None:
+    def __start_game(self, game_mode: GameMode, field_size: str, timer: str) -> None:
         if not field_size.isdigit() or not 3 <= int(field_size) <= 15:
             showerror("Ошибка", "Нужно ввести размер поля в строку ввода (целое число от 3 до 15)")
             return
+        if not timer.isdigit():
+            timer = '15'
         self._window.destroy()
-        game = Game(game_mode, int(field_size))
+        game = Game(game_mode, int(field_size), int(timer))
         game.run()
         self.__init__()
 

@@ -7,14 +7,18 @@ from tkinter import *
 import math
 import pygame
 from queue import Queue
+import time
 
 
 class Game:
-    def __init__(self, game_mode: GameMode, size: int = 11) -> None:
+    def __init__(self, game_mode: GameMode, size: int = 11, move_time: int = 15) -> None:
         pygame.init()
+        pygame.font.init()
         self.size: int = size
+        self._move_time = move_time
         self.game_mode: GameMode = game_mode
         self._running: bool = True
+        self._current_move_time = time.time()
         self._hex_size: int = 20
         self._screen_size: int = (size * 2 + 1) * self._hex_size + 100
         self._screen = pygame.display.set_mode((self._screen_size, self._screen_size * 1.2))
@@ -24,7 +28,7 @@ class Game:
         self._bot_side = random.choice(sides)
         sides.remove(self._bot_side)
         self._player_side = sides[0]
-        self._cells: list[list[HexagonalCell]] = [[None for _ in range(self.size * 2 - 1)] for _ in range(self.size * 2 - 1)] # noqa
+        self._cells: list[list[HexagonalCell]] = [[None for _ in range(self.size * 2 - 1)] for _ in range(self.size * 2 - 1)]  # noqa
         self.__create_field()
 
     def __create_field(self) -> None:
@@ -91,6 +95,7 @@ class Game:
                         self._running = False
                     else:
                         self._move_side = Side.BLUE if self._move_side == Side.RED else Side.RED
+                        self._current_move_time = time.time()
 
     def __make_bot_move(self):
         if self.game_mode == GameMode.EASY_BOT:
@@ -102,7 +107,8 @@ class Game:
             self._running = False
         else:
             self._move_side = Side.BLUE if self._move_side == Side.RED else Side.RED
- 
+            self._current_move_time = time.time()
+
     def __make_easy_bot_move(self):
         neutral_cells = []
         for row in self._cells:
@@ -172,9 +178,25 @@ class Game:
         with open("records.txt", "w") as f:
             f.write('\n'.join([str(r) for r in old_records]) + '\n')
 
+    def __draw_timer(self, pos=(60, 50)):
+        color = (0, 0, 255) if self._move_side == Side.BLUE else (255, 0, 0)
+        timer_font = pygame.font.Font(None, 36)
+        remaining = self._current_move_time + self._move_time - time.time()
+        if remaining <= 0:
+            self._running = False
+            self._move_side = Side.BLUE if self._move_side == Side.RED else Side.RED
+            return
+        else:
+            timer_text = f"{remaining}"[:4]
+        text_surface = timer_font.render(timer_text, True, color)
+        text_rect = text_surface.get_rect(center=pos)
+        self._screen.fill(BLACK, text_rect)
+        self._screen.blit(text_surface, text_rect.topleft)
+
     def run(self) -> None:
         while self._running:
             self.__draw_field()
+            self.__draw_timer()
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self._running = False
