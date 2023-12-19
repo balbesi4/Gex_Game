@@ -3,11 +3,13 @@ from Enums.move_side_enum import Side
 from Enums.game_mode_enum import GameMode
 from hexagonal_cell import HexagonalCell
 from constants import *
-from tkinter import *
+import tkinter as tk
 import math
 import pygame
 from queue import Queue
 import time
+from move import Move
+from button import Button
 
 
 class Game:
@@ -15,12 +17,16 @@ class Game:
         pygame.init()
         pygame.font.init()
         self.size: int = size
+        self._move_stack: list[Move] = []
+        self._undone_stack: list[Move] = []
         self._move_time = move_time
         self.game_mode: GameMode = game_mode
         self._running: bool = True
         self._current_move_time = time.time()
         self._hex_size: int = 20
         self._screen_size: int = (size * 2 + 1) * self._hex_size + 100
+        if self.size > 9:
+            self._screen_size += 100
         self._screen = pygame.display.set_mode((self._screen_size, self._screen_size * 1.2))
         pygame.display.set_caption("Гекс")
         self._move_side: Side = Side.BLUE
@@ -29,6 +35,8 @@ class Game:
         sides.remove(self._bot_side)
         self._player_side = sides[0]
         self._cells: list[list[HexagonalCell]] = [[None for _ in range(self.size * 2 - 1)] for _ in range(self.size * 2 - 1)]  # noqa
+        self._undo_button = Button(20, self._screen_size - 20, 80, 30, 'Undo')
+        self._redo_button = Button(self._screen_size - 100, self._screen_size - 20, 80, 30, 'Redo')
         self.__create_field()
 
     def __create_field(self) -> None:
@@ -94,8 +102,11 @@ class Game:
                     if self.__check_win():
                         self._running = False
                     else:
+                        self._move_stack.append(Move(self._move_side, cell))
                         self._move_side = Side.BLUE if self._move_side == Side.RED else Side.RED
                         self._current_move_time = time.time()
+                    self._undone_stack.clear()
+                    return
 
     def __make_bot_move(self):
         if self.game_mode == GameMode.EASY_BOT:
@@ -106,8 +117,7 @@ class Game:
         if self.__check_win():
             self._running = False
         else:
-            self._move_side = Side.BLUE if self._move_side == Side.RED else Side.RED
-            self._current_move_time = time.time()
+            self.__update_move()
 
     def __make_easy_bot_move(self):
         neutral_cells = []
@@ -117,9 +127,30 @@ class Game:
                     neutral_cells.append(cell)
         picked_cell: HexagonalCell = random.choice(neutral_cells)
         picked_cell.try_change_color(self._move_side)
+        self._move_stack.append(Move(self._move_side, picked_cell))
 
     def __make_hard_bot_move(self):
         pass
+
+    def __update_move(self):
+        self._move_side = Side.BLUE if self._move_side == Side.RED else Side.RED
+        self._current_move_time = time.time()
+
+    def __undo_move(self):
+        if len(self._move_stack) == 0:
+            return
+        last_move = self._move_stack.pop()
+        last_move.undo()
+        self._undone_stack.append(last_move)
+        self.__update_move()
+
+    def __redo_move(self):
+        if len(self._undone_stack) == 0:
+            return
+        last_undone_move = self._undone_stack.pop()
+        last_undone_move.redo()
+        self._move_stack.append(last_undone_move)
+        self.__update_move()
 
     def __check_win(self) -> bool:
         start_cells = set()
@@ -158,14 +189,14 @@ class Game:
         return 0 <= x < self.size * 2 - 1 and 0 <= y < self.size * 2 - 1
 
     def __create_winner_window(self) -> None:
-        window = Tk()
+        window = tk.Tk()
         window.resizable(False, False)
         window.geometry("400x200")
         # window.grab_set()
-        winner_label = Label(window, text=f"Победил {self._move_side.value} игрок!", font=('Roboto', 20))
+        winner_label = tk.Label(window, text=f"Победил {self._move_side.value} игрок!", font=('Roboto', 20))
         winner_label.place(x=50, y=80)
 
-    def __update_records(self):
+    def __update_records(self) -> None:
         with open("records.txt") as f:
             old_records = [int(a[:-1]) for a in f.readlines()]
             f.flush()
@@ -178,7 +209,7 @@ class Game:
         with open("records.txt", "w") as f:
             f.write('\n'.join([str(r) for r in old_records]) + '\n')
 
-    def __draw_timer(self, pos=(60, 50)):
+    def __draw_timer(self, pos=(60, 50)) -> None:
         color = (0, 0, 255) if self._move_side == Side.BLUE else (255, 0, 0)
         timer_font = pygame.font.Font(None, 36)
         remaining = self._current_move_time + self._move_time - time.time()
@@ -193,10 +224,18 @@ class Game:
         self._screen.fill(BLACK, text_rect)
         self._screen.blit(text_surface, text_rect.topleft)
 
+    def __check_button_press(self, pos, button) -> bool:
+        return button.is_over(pos)
+
+    def __draw_buttons(self) -> None:
+        self._undo_button.draw(self._screen)
+        self._redo_button.draw(self._screen)
+
     def run(self) -> None:
         while self._running:
             self.__draw_field()
             self.__draw_timer()
+            self.__draw_buttons()
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self._running = False
@@ -206,6 +245,10 @@ class Game:
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     mouse_x, mouse_y = event.pos
                     self.__handle_mouse_click(mouse_x, mouse_y)
+                    if self.__check_button_press((mouse_x, mouse_y), self._redo_button):
+                        self.__redo_move()
+                    elif self.__check_button_press((mouse_x, mouse_y), self._undo_button):
+                        self.__undo_move()
             pygame.display.flip()
         pygame.quit()
 

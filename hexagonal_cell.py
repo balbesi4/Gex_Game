@@ -57,3 +57,7 @@ class HexagonalCell:
             self.color = BLUE
         self.side = move_side
         return True
+
+    def make_neutral(self):
+        self.color = GRAY
+        self.side = Side.NEUTRAL
