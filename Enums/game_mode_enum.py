@@ -2,5 +2,6 @@ from enum import Enum
 
 
 class GameMode(Enum):
-    BOT = 1
-    PLAYER = 2
+    EASY_BOT = 1
+    HARD_BOT = 2
+    PLAYER = 3

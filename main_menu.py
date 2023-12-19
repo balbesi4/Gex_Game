@@ -19,7 +19,7 @@ class MainMenu:
         size_entry = Entry(self._window, textvariable=size_var, width=40)
         play_with_bot_button = Button(self._window, text='Играть с ботом', font=('Roboto', 14),
                                       width=12, height=2, command=lambda:
-                                      self.__start_game(GameMode.BOT, size_var.get()))
+                                      self.__start_game(GameMode.EASY_BOT, size_var.get()))
         play_with_player_button = Button(self._window, text='Играть вдвоем', font=('Roboto', 14),
                                          width=12, height=2, command=lambda:
                                          self.__start_game(GameMode.PLAYER, size_var.get()))

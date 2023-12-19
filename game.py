@@ -1,3 +1,4 @@
+import random
 from Enums.move_side_enum import Side
 from Enums.game_mode_enum import GameMode
 from hexagonal_cell import HexagonalCell
@@ -19,6 +20,10 @@ class Game:
         self._screen = pygame.display.set_mode((self._screen_size, self._screen_size * 1.2))
         pygame.display.set_caption("Гекс")
         self._move_side: Side = Side.BLUE
+        sides = [Side.RED, Side.BLUE]
+        self._bot_side = random.choice(sides)
+        sides.remove(self._bot_side)
+        self._player_side = sides[0]
         self._cells: list[list[HexagonalCell]] = [[None for _ in range(self.size * 2 - 1)] for _ in range(self.size * 2 - 1)] # noqa
         self.__create_field()
 
@@ -87,6 +92,29 @@ class Game:
                     else:
                         self._move_side = Side.BLUE if self._move_side == Side.RED else Side.RED
 
+    def __make_bot_move(self):
+        if self.game_mode == GameMode.EASY_BOT:
+            self.__make_easy_bot_move()
+        else:
+            self.__make_hard_bot_move()
+
+        if self.__check_win():
+            self._running = False
+        else:
+            self._move_side = Side.BLUE if self._move_side == Side.RED else Side.RED
+ 
+    def __make_easy_bot_move(self):
+        neutral_cells = []
+        for row in self._cells:
+            for cell in row:
+                if cell and cell.side == Side.NEUTRAL:
+                    neutral_cells.append(cell)
+        picked_cell: HexagonalCell = random.choice(neutral_cells)
+        picked_cell.try_change_color(self._move_side)
+
+    def __make_hard_bot_move(self):
+        pass
+
     def __check_win(self) -> bool:
         start_cells = set()
         queue = Queue()
@@ -136,7 +164,7 @@ class Game:
             old_records = [int(a[:-1]) for a in f.readlines()]
             f.flush()
         new_record_index = 0
-        if self.game_mode == GameMode.BOT:
+        if self.game_mode == GameMode.EASY_BOT or self.game_mode == GameMode.HARD_BOT:
             new_record_index += 2
         if self._move_side == Side.RED:
             new_record_index += 1
@@ -150,6 +178,9 @@ class Game:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     self._running = False
+                elif (self.game_mode == GameMode.EASY_BOT or self.game_mode == GameMode.HARD_BOT) and \
+                        self._move_side == self._bot_side:
+                    self.__make_bot_move()
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     mouse_x, mouse_y = event.pos
                     self.__handle_mouse_click(mouse_x, mouse_y)
