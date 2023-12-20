@@ -108,8 +108,7 @@ class Game:
                         self._is_ended = True
                     else:
                         self._move_stack.append(Move(self._move_side, cell))
-                        self._move_side = Side.BLUE if self._move_side == Side.RED else Side.RED
-                        self._current_move_time = time.time()
+                        self.__update_move()
                     self._undone_stack.clear()
                     return
 
