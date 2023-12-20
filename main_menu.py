@@ -2,14 +2,16 @@ from tkinter import *
 from tkinter.messagebox import showerror
 from Enums.game_mode_enum import GameMode
 from game import Game
+from functools import partial
 
 
 class MainMenu:
-    def __init__(self) -> None:
+    def __init__(self, games: list[Game] = None) -> None:
+        self._games: list[Game] = games if games else []
         self._window = Tk()
         self._window.resizable(False, False)
         self._window.grab_set()
-        self._window.geometry("400x280")
+        self._window.geometry("400x320")
         self.__draw_menu()
         self._window.mainloop()
 
@@ -25,6 +27,8 @@ class MainMenu:
         play_with_player_button = Button(self._window, text='Играть вдвоем', font=('Roboto', 14),
                                          width=12, height=2, command=lambda:
                                          self.__start_game(GameMode.PLAYER, size_var.get(), timer_var.get()))
+        load_game_button = Button(self._window, text='Загрузить игру', font=('Roboto', 14),
+                                  command=lambda: self.__show_load_window())
         record_table_button = Button(self._window, text='Таблица побед', font=("Roboto", 14),
                                      command=lambda: self.__show_record_table())
 
@@ -33,7 +37,35 @@ class MainMenu:
         timer_entry.pack(anchor='center', pady=5)
         play_with_bot_button.place(x=50, y=130)
         play_with_player_button.place(x=220, y=130)
-        record_table_button.pack(side=BOTTOM, pady=20)
+        record_table_button.pack(side=BOTTOM, pady=10)
+        load_game_button.pack(side=BOTTOM, pady=10)
+
+    def __show_load_window(self) -> None:
+        if len(self._games) == 0:
+            showerror('Ошибка', 'Сохраненных игр пока что нет')
+            return
+        show_window = Toplevel(self._window)
+        show_window.grab_set()
+        show_window.geometry(f"300x{len(self._games) * 50}")
+        show_window.resizable(False, False)
+        for i in range(len(self._games)):
+            load_button = Button(show_window, text=f"Игра {i + 1}",
+                                 font=('Roboto', 14),
+                                 command=partial(self.__load_game, show_window, i))
+            load_button.pack(side=TOP, pady=5)
+
+    def __load_game(self, window: Toplevel, game_index: int) -> None:
+        window.destroy()
+        self._window.destroy()
+        self._games[game_index].continue_game()
+        self.__init__(self._games)
+
+    def save_game(self, game: Game) -> None:
+        self._games.append(game)
+
+    def end_game(self, game: Game) -> None:
+        if game in self._games:
+            self._games.remove(game)
 
     def __start_game(self, game_mode: GameMode, field_size: str, timer: str) -> None:
         if not field_size.isdigit() or not 3 <= int(field_size) <= 15:
@@ -42,9 +74,9 @@ class MainMenu:
         if not timer.isdigit():
             timer = '15'
         self._window.destroy()
-        game = Game(game_mode, int(field_size), int(timer))
+        game = Game(self, game_mode, len(self._games), size=int(field_size), move_time=int(timer))
         game.run()
-        self.__init__()
+        self.__init__(self._games)
 
     def __show_record_table(self) -> None:
         with open("records.txt") as f:

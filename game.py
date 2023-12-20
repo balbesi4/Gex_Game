@@ -13,9 +13,12 @@ from button import Button
 
 
 class Game:
-    def __init__(self, game_mode: GameMode, size: int = 11, move_time: int = 15) -> None:
+    def __init__(self, main_menu, game_mode: GameMode, log_index: int, size: int = 11,
+                 move_time: int = 15, current_side: Side = Side.BLUE) -> None:
         pygame.init()
         pygame.font.init()
+        self._menu = main_menu
+        self.log_index = log_index
         self.size: int = size
         self._move_stack: list[Move] = []
         self._undone_stack: list[Move] = []
@@ -29,11 +32,12 @@ class Game:
             self._screen_size += 100
         self._screen = pygame.display.set_mode((self._screen_size, self._screen_size * 1.2))
         pygame.display.set_caption("Гекс")
-        self._move_side: Side = Side.BLUE
+        self._move_side: Side = current_side
         sides = [Side.RED, Side.BLUE]
         self._bot_side = random.choice(sides)
         sides.remove(self._bot_side)
         self._player_side = sides[0]
+        self._is_ended = False
         self._cells: list[list[HexagonalCell]] = [[None for _ in range(self.size * 2 - 1)] for _ in range(self.size * 2 - 1)]  # noqa
         self._undo_button = Button(20, self._screen_size - 20, 80, 30, 'Undo')
         self._redo_button = Button(self._screen_size - 100, self._screen_size - 20, 80, 30, 'Redo')
@@ -101,6 +105,7 @@ class Game:
                 if cell and cell.is_point_in_hexagon((mouse_x, mouse_y)) and cell.try_change_color(self._move_side):
                     if self.__check_win():
                         self._running = False
+                        self._is_ended = True
                     else:
                         self._move_stack.append(Move(self._move_side, cell))
                         self._move_side = Side.BLUE if self._move_side == Side.RED else Side.RED
@@ -108,7 +113,7 @@ class Game:
                     self._undone_stack.clear()
                     return
 
-    def __make_bot_move(self):
+    def __make_bot_move(self) -> None:
         if self.game_mode == GameMode.EASY_BOT:
             self.__make_easy_bot_move()
         else:
@@ -116,10 +121,11 @@ class Game:
 
         if self.__check_win():
             self._running = False
+            self._is_ended = True
         else:
             self.__update_move()
 
-    def __make_easy_bot_move(self):
+    def __make_easy_bot_move(self) -> None:
         neutral_cells = []
         for row in self._cells:
             for cell in row:
@@ -231,6 +237,17 @@ class Game:
         self._undo_button.draw(self._screen)
         self._redo_button.draw(self._screen)
 
+    def continue_game(self) -> None:
+        pygame.init()
+        pygame.font.init()
+        self._screen = pygame.display.set_mode((self._screen_size, self._screen_size * 1.2))
+        pygame.display.set_caption("Гекс")
+        self._running = True
+        self.run()
+
+    def __save_game(self):
+        self._menu.save_game(self)
+
     def run(self) -> None:
         while self._running:
             self.__draw_field()
@@ -252,5 +269,9 @@ class Game:
             pygame.display.flip()
         pygame.quit()
 
-        self.__update_records()
-        self.__create_winner_window()
+        if self._is_ended:
+            self._menu.end_game(self)
+            self.__update_records()
+            self.__create_winner_window()
+        else:
+            self.__save_game()
